@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pushup Counter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        #counter-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .button-container {
+            display: flex;
+            align-items: center;
+            margin: 5px;
+        }
+
+        button {
+            font-size: 24px;
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        #counter {
+            font-size: 36px;
+            padding: 0 20px;
+        }
+
+        #history {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #ccc;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div id="counter-container">
+        <div class="button-container">
+            <button onclick="increment(1)">+1</button>
+            <button onclick="increment(10)">+10</button>
+            <button onclick="increment(20)">+20</button>
+        </div>
+        <span id="counter">0</span>
+        <div class="button-container">
+            <button onclick="decrement(1)">-1</button>
+            <button onclick="decrement(10)">-10</button>
+            <button onclick="decrement(20)">-20</button>
+        </div>
+    </div>
+    <h3>Pushup History</h3>
+    <div id="history">
+        <table id="history-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Pushups</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+    <script>
+        const counterElement = document.getElementById('counter');
+        const historyTableBody = document.getElementById('history-table').querySelector('tbody');
+
+        let counter = parseInt(localStorage.getItem('pushupCounter')) || 0;
+        let history = JSON.parse(localStorage.getItem('pushupHistory')) || [];
+
+        function increment(amount) {
+            counter += amount;
+            updateCounter();
+            saveCounter();
+        }
+
+        function decrement(amount) {
+            if (counter - amount >= 0) {
+                counter -= amount;
+                updateCounter();
+                saveCounter();
+            }
+        }
+
+        function updateCounter() {
+            counterElement.textContent = counter;
+        }
+
+        function saveCounter() {
+            localStorage.setItem('pushupCounter', counter);
+        }
+
+        function resetCounter() {
+            saveHistory();
+            counter = 0;
+            updateCounter();
+            saveCounter();
+        }
+
+        function saveHistory() {
+            const date = new Date().toLocaleDateString("en-US", { timeZone: "America/New_York" });
+            history.push({ date, pushups: counter });
+            localStorage.setItem('pushupHistory', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            historyTableBody.innerHTML = '';
+            history.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${record.date}</td><td>${record.pushups}</td>`;
+                historyTableBody.appendChild(row);
+            });
+        }
+
+        // Schedule reset every day at 12AM EST
+        function scheduleReset() {
+            const now = new Date();
+            const estTime = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+            const nextMidnight = new Date(estTime);
+            nextMidnight.setDate(nextMidnight.getDate() + 1);
+            nextMidnight.setHours(0, 0, 0, 0);
+
+            const timeToReset = nextMidnight - estTime;
+            setTimeout(() => {
+                resetCounter();
+                scheduleReset(); // Schedule the next reset
+            }, timeToReset);
+        }
+
+        // Load counter from local storage
+        updateCounter();
+        renderHistory();
+        scheduleReset();
+    </script>
+</body>
+</html>
